@@ -40,6 +40,7 @@ class CategorySelectionScreen(Screen):
 
     BINDINGS = [
         Binding("q", "quit", "Atrás"),
+        Binding("escape", "quit", "Atrás"),
         Binding("enter", "select", "Seleccionar"),
     ]
 
@@ -52,18 +53,29 @@ class CategorySelectionScreen(Screen):
         yield Header()
         yield Label("[bold cyan]Selecciona una categoría de escaneo[/bold cyan]")
 
-        # Crear opciones de categorías
         options = []
-        for cat_id, cat_info in self.menu_state.obtener_categorias():
-            options.append(Option(cat_id))
+        for cat_label, cat_id in self.menu_state.obtener_categorias():
+            options.append(Option(cat_label, id=cat_id))
 
         yield OptionList(*options, id="category_list")
         yield Footer()
 
-    def on_option_list_selected(self, event):
+    def on_mount(self):
+        """Focar el selector al montar."""
+        self.query_one(OptionList).focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected):
         """Manejar selección."""
-        if self.menu_state.seleccionar_categoria(event.option.id.split()[-1]):
+        if self.menu_state.seleccionar_categoria(event.option.id):
             self.app.pop_screen()
+            if hasattr(self.app, 'query_one'):
+                self.app.query_one('#category_display', Static).update(
+                    self.app._get_category_display()
+                )
+
+    def action_quit(self):
+        """Cerrar la pantalla actual."""
+        self.app.pop_screen()
 
 
 class OPSECSelectionScreen(Screen):
@@ -71,6 +83,7 @@ class OPSECSelectionScreen(Screen):
 
     BINDINGS = [
         Binding("q", "quit", "Atrás"),
+        Binding("escape", "quit", "Atrás"),
         Binding("enter", "select", "Seleccionar"),
     ]
 
@@ -83,19 +96,29 @@ class OPSECSelectionScreen(Screen):
         yield Header()
         yield Label("[bold yellow]Selecciona modo OPSEC[/bold yellow]")
 
-        # Crear opciones de OPSEC
         options = []
-        for modo_id, modo_info in self.menu_state.obtener_modos_opsec():
-            options.append(Option(modo_id))
+        for modo_label, modo_id in self.menu_state.obtener_modos_opsec():
+            options.append(Option(modo_label, id=modo_id))
 
         yield OptionList(*options, id="opsec_list")
         yield Footer()
 
-    def on_option_list_selected(self, event):
+    def on_mount(self):
+        """Focar el selector al montar."""
+        self.query_one(OptionList).focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected):
         """Manejar selección."""
-        modo_id = event.option.id.split("🔐 ")[1].split(" -")[0]
-        if self.menu_state.seleccionar_opsec(modo_id):
+        if self.menu_state.seleccionar_opsec(event.option.id):
             self.app.pop_screen()
+            if hasattr(self.app, 'query_one'):
+                self.app.query_one('#opsec_display', Static).update(
+                    self.app._get_opsec_display()
+                )
+
+    def action_quit(self):
+        """Cerrar la pantalla actual."""
+        self.app.pop_screen()
 
 
 class TargetInputScreen(Screen):
@@ -118,10 +141,25 @@ class TargetInputScreen(Screen):
             yield Input(placeholder="Target", id="target_input")
         yield Footer()
 
+    def on_mount(self):
+        """Focar el input al montar."""
+        self.query_one(Input).focus()
+
     def on_input_submitted(self, event):
         """Manejar envío de input."""
         if self.menu_state.establecer_target(event.value):
             self.app.pop_screen()
+            if hasattr(self.app, 'query_one'):
+                self.app.query_one('#category_display', Static).update(
+                    self.app._get_category_display()
+                )
+                self.app.query_one('#opsec_display', Static).update(
+                    self.app._get_opsec_display()
+                )
+
+    def action_cancel(self):
+        """Cerrar la pantalla actual."""
+        self.app.pop_screen()
 
 
 class ScannerSelectionScreen(Screen):
@@ -129,6 +167,7 @@ class ScannerSelectionScreen(Screen):
 
     BINDINGS = [
         Binding("q", "quit", "Atrás"),
+        Binding("escape", "quit", "Atrás"),
         Binding("enter", "select", "Seleccionar"),
     ]
 
@@ -145,23 +184,28 @@ class ScannerSelectionScreen(Screen):
         
         yield Label(f"[bold yellow]{categoria_info.get('nombre', 'Scanner')} - Selecciona módulo[/bold yellow]")
         
-        # Crear opciones de scanners
         options = []
         modulos = categoria_info.get('modulos', [])
         for modulo in modulos:
-            options.append(Option(modulo))
+            options.append(Option(modulo, id=modulo))
         
         yield OptionList(*options, id="scanner_list")
         yield Footer()
 
-    def on_option_list_selected(self, event):
+    def on_mount(self):
+        """Focar el selector al montar."""
+        self.query_one(OptionList).focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected):
         """Manejar selección."""
         scanner_id = event.option.id
-        self.menu_state.seleccionar_scanner(scanner_id)
-        
-        # Pasar a pantalla de progreso
+        if scanner_id and self.menu_state.seleccionar_scanner(scanner_id):
+            self.app.pop_screen()
+            self.app.push_screen(ScanProgressScreen(self.menu_state))
+
+    def action_quit(self):
+        """Cerrar la pantalla actual."""
         self.app.pop_screen()
-        self.app.push_screen(ScanProgressScreen(self.menu_state))
 
 
 class ScanProgressScreen(Screen):
