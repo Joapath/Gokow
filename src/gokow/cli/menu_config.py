@@ -111,7 +111,7 @@ Screen {
     text-align: center;
     width: 100%;
     height: 1;
-    content-align: middle top;
+    content-align: center top;
 }
 
 #subtitle {
